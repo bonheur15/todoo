@@ -89,7 +89,7 @@ export async function toggleTodoAction(id: string, completed: boolean) {
 
   await db
     .update(todo)
-    .set({ completed: completed ? 1 : 0, updatedAt: new Date().toISOString() })
+    .set({ completed: completed ? 1 : 0 })
     // Extra security: ensure the todo belongs to the current user
     .where(and(eq(todo.id, id), eq(todo.userId, userId)));
 
