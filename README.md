@@ -1,36 +1,134 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Todoo — A Cozy Space for Your Tasks 📝
 
-## Getting Started
+## ✨ Key Features
 
-First, run the development server:
+**Todoo** isn't just another to-do list. It's a mindful productivity tool built with a focus on simplicity and a calming user experience.
+
+- **Cozy & Inviting UI**: A warm, soft-toned interface with gentle animations that make task management feel less like a chore.
+- **Google Authentication**: Secure and easy sign-in with your Google account, powered by [Auth.js](https://authjs.dev/).
+- **Organize with Lists**: Group your tasks into separate lists for work, home, or your next big idea to keep your mind tidy.
+- **Fully Responsive**: A seamless experience whether you're on your desktop, tablet, or phone.
+- **Optimized for SEO**: Built with Next.js 14 and best practices for discoverability.
+- **Persisted Data**: Your lists and todos are securely stored in a MySQL database, managed with Drizzle ORM.
+
+---
+
+## 🛠 Tech Stack
+
+This project is built with a modern, type-safe, and performant stack:
+
+- **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
+- **Authentication**: [Auth.js (NextAuth.js v5)](https://authjs.dev/)
+- **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
+- **Database**: MySQL (PlanetScale or other providers)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Animation**: [Framer Motion](https://www.framer.com/motion/)
+- **Fonts**: Lora & Nunito Sans from [Google Fonts](https://fonts.google.com/)
+
+---
+
+## 🚀 Getting Started
+
+Follow these steps to get a copy of the project up and running on your local machine.
+
+### 1. Prerequisites
+
+Make sure you have the following installed:
+
+- [Node.js](https://nodejs.org/en/) (v18.17 or later)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+- [Bun](https://bun.sh/) (optional, for faster installs and dev server)
+- A MySQL database (e.g., [just find it](just find it/))
+
+### 2. Clone the Repository
+
+```bash
+git clone https://github.com/bonheur15/todoo.git
+cd todoo
+```
+
+### 3. Install Dependencies
+
+```bash
+bun install
+# or
+npm install
+# or
+yarn install
+```
+
+### 4. Set Up Environment Variables
+
+Create a `.env` file in the root of the project and add the following:
+
+```env
+# Database URL from your provider
+DATABASE_URL="mysql://user:password@host/database?sslaccept=strict"
+
+# Auth.js Configuration
+AUTH_SECRET="your-super-secret-auth-secret"
+
+# Google OAuth Credentials
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+```
+
+You can generate `AUTH_SECRET` using:
+
+```bash
+openssl rand -base64 32
+# or
+npx auth secret
+# or
+bunx auth secret
+```
+
+Get your Google OAuth credentials from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+
+### 5. Push the Database Schema
+
+```bash
+npx drizzle-kit push
+# or
+bun run db:push
+```
+
+This will create the necessary tables (`users`, `todo_lists`, `todos`, etc.) in your database.
+
+### 6. Run the Development Server
 
 ```bash
 npm run dev
 # or
 yarn dev
 # or
-pnpm dev
-# or
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📁 Project Structure
 
-## Learn More
+```
+.
+├── app/
+│   ├── (auth)/                    # Login page/Register Page
+│   ├── (dashboard)/dashboard/     # Main dashboard
+│   ├── api/auth/[...nextauth]/    # NextAuth.js API route
+│   ├── layout.tsx                 # Root layout
+│   └── page.tsx                   # Homepage
+├── components/                    # Shared React components
+├── db/                            # Drizzle ORM config and schema
+│   └── schema.ts
+├── lib/                           # Helper libraries
+├── public/                        # Static assets
+└── ...
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📄 License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+No license yet
