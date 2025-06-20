@@ -49,9 +49,7 @@ export const session = mysqlTable("session", {
   userId: varchar({ length: 255 })
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  expires: timestamp({ mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
+  expires: timestamp({ mode: "string" }).defaultNow().notNull(),
 });
 
 export const todo = mysqlTable("todo", {
@@ -64,12 +62,8 @@ export const todo = mysqlTable("todo", {
   listId: varchar({ length: 255 })
     .notNull()
     .references(() => todoList.id, { onDelete: "cascade" }),
-  createdAt: timestamp({ fsp: 3, mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
-  updatedAt: timestamp({ fsp: 3, mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
+  createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp().defaultNow().notNull(),
 });
 
 export const todoList = mysqlTable("todo_list", {
@@ -78,12 +72,8 @@ export const todoList = mysqlTable("todo_list", {
   userId: varchar({ length: 255 })
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  createdAt: timestamp({ fsp: 3, mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
-  updatedAt: timestamp({ fsp: 3, mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
+  createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp().defaultNow().notNull(),
 });
 
 export const user = mysqlTable(
@@ -92,9 +82,7 @@ export const user = mysqlTable(
     id: varchar({ length: 255 }).notNull().primaryKey(),
     name: varchar({ length: 255 }).default("NULL"),
     email: varchar({ length: 255 }).default("NULL"),
-    emailVerified: timestamp({ fsp: 3, mode: "string" })
-      .default(sql`CURRENT_TIMESTAMP(3)`)
-      .notNull(),
+    emailVerified: timestamp({ fsp: 3, mode: "string" }).defaultNow(),
     image: varchar({ length: 255 }).default("NULL"),
     isAnonymous: tinyint("is_anonymous").default(0).notNull(),
   },
@@ -104,7 +92,5 @@ export const user = mysqlTable(
 export const verificationtoken = mysqlTable("verificationtoken", {
   identifier: varchar({ length: 255 }).notNull(),
   token: varchar({ length: 255 }).notNull(),
-  expires: timestamp({ mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
+  expires: timestamp({ mode: "string" }).defaultNow().notNull(),
 });

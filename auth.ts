@@ -7,6 +7,9 @@ import { randomUUID } from "crypto"; // For generating unique IDs
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
+  session: {
+    strategy: "jwt",
+  },
   providers: [
     Google,
     Credentials({
@@ -15,9 +18,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // We don't need actual credentials for anonymous login,
         // but the structure might be expected by NextAuth.
         // An empty object or a dummy field can be used.
-        anonymous: { label: "Anonymous Login", type: "hidden", defaultValue: "true" },
+        anonymous: {
+          label: "Anonymous Login",
+          type: "hidden",
+          defaultValue: "true",
+        },
       },
       async authorize(credentials) {
+        console.log("Anonymous login attempt with credentials:", credentials);
         // The DrizzleAdapter's createUser method will be used implicitly
         // when a new user signs in if it doesn't exist.
         // We need to return a user object that the adapter can use.
@@ -62,8 +70,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user && token.isAnonymous) {
         (session.user as any).isAnonymous = token.isAnonymous;
       }
-      if (session.user && token.sub) { // token.sub is usually the user id from the provider
-          (session.user as any).id = token.sub;
+      if (session.user && token.sub) {
+        // token.sub is usually the user id from the provider
+        (session.user as any).id = token.sub;
       }
       return session;
     },
@@ -76,5 +85,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // }
       return token;
     },
-  }
+  },
 });
