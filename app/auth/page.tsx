@@ -106,6 +106,20 @@ export default function CozyLoginPage() {
     }
   };
 
+  const handleAnonymousSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signIn("credentials", {
+        anonymous: "true", // Matches the dummy credential field in auth.ts
+        callbackUrl: "/dashboard",
+      });
+    } catch (error) {
+      console.error("Anonymous sign in failed:", error);
+      setIsLoading(false); // Only if signIn itself throws an error before redirect
+    }
+    // setIsLoading(false); // Typically, redirect will occur before this is hit
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#FDF8F0] font-sans text-[#4A4238]">
       <style jsx global>{`
@@ -144,7 +158,29 @@ export default function CozyLoginPage() {
         >
           <GoogleIcon />
           <span className="font-nunito-sans font-bold text-base">
-            {isLoading ? "Signing in..." : "Continue with Google"}
+            {isLoading ? "Redirecting..." : "Continue with Google"}
+          </span>
+        </motion.button>
+
+        <div className="my-6 flex items-center">
+          <div className="flex-grow border-t border-[#EADFD1]"></div>
+          <span className="mx-4 font-nunito-sans text-sm text-[#867A6E]">
+            OR
+          </span>
+          <div className="flex-grow border-t border-[#EADFD1]"></div>
+        </div>
+
+        <motion.button
+          onClick={handleAnonymousSignIn}
+          disabled={isLoading}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {/* Icon can be added here if available, e.g., a generic user/guest icon */}
+          <span className="font-nunito-sans font-bold text-base">
+            {isLoading ? "Redirecting..." : "Continue as Guest"}
           </span>
         </motion.button>
       </motion.div>

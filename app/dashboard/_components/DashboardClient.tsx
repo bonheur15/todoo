@@ -72,7 +72,7 @@ const LogoutIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 type DashboardClientProps = {
   initialLists: TodoList[];
-  user: User;
+  user: User & { isAnonymous?: boolean }; // Explicitly include isAnonymous in the type
 };
 
 export default function DashboardClient({
@@ -261,7 +261,31 @@ export default function DashboardClient({
           </div>
         </form>
 
-        <div className="mt-8 pt-4 border-t border-[#DCD1C2]">
+        {user.isAnonymous && (
+          <div className="mt-4 p-3 bg-[#EADFD1]/50 rounded-lg text-center">
+            <p className="font-nunito-sans text-sm text-[#6D6356]">
+              Enjoying your session?
+            </p>
+            <a
+              href="/auth" // Point to the main auth page to sign up/in
+              className="font-nunito-sans text-sm font-bold text-[#C19A6B] hover:underline"
+            >
+              Sign up or Log in
+            </a>
+            <p className="font-nunito-sans text-xs text-[#867a6e] mt-1">
+              to save your work permanently.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4 pt-4 border-t border-[#DCD1C2]">
+          <a
+            href="/about"
+            className="w-full flex items-center gap-3 text-left font-nunito-sans text-base p-2 rounded-lg text-[#6D6356] hover:bg-[#EADFD1]/60 mb-2"
+          >
+            {/* You might want to add an icon here if you have one for "About Us" */}
+            <span>About Us</span>
+          </a>
           <button
             onClick={() => signOut()}
             className="w-full flex items-center gap-3 text-left font-nunito-sans text-base p-2 rounded-lg text-[#6D6356] hover:bg-[#EADFD1]/60"
@@ -277,7 +301,7 @@ export default function DashboardClient({
           <>
             <div className="mb-8">
               <p className="font-nunito-sans text-lg text-[#867a6e]">
-                {greeting}, {user.name}.
+                {greeting}, {user.isAnonymous ? "Guest User" : user.name}.
               </p>
               <h2 className="font-lora text-4xl md:text-5xl font-medium text-[#4A4238] mt-1">
                 {activeList.name}

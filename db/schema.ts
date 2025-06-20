@@ -40,7 +40,7 @@ export const authenticator = mysqlTable(
     transports: varchar({ length: 255 }).default("NULL"),
   },
   (table) => [
-    unique("authenticator_credentialID_unique").on(table.credentialId),
+    unique("authenticator_credentialId_unique").on(table.credentialId), // Changed credentialID to credentialId in constraint name
   ]
 );
 
@@ -96,6 +96,7 @@ export const user = mysqlTable(
       .default(sql`CURRENT_TIMESTAMP(3)`)
       .notNull(),
     image: varchar({ length: 255 }).default("NULL"),
+    isAnonymous: tinyint("is_anonymous").default(0).notNull(),
   },
   (table) => [unique("user_email_unique").on(table.email)]
 );
