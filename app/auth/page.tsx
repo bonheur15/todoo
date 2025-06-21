@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 48 48" width="24" height="24" {...props}>
@@ -25,7 +26,6 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-// A decorative SVG element for a cozy touch
 const CozyIllustration = () => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -94,14 +94,34 @@ const CozyIllustration = () => (
 
 export default function CozyLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      setIsLoading(true);
+      setError(null);
+
+      await signIn("google", {
+        callbackUrl: "/dashboard",
+        redirect: true, // Let NextAuth handle the redirect
+      });
+
+      // const result = await signIn("google", {
+      //   callbackUrl: "/dashboard",
+      //   redirect: false
+      // });
+
+      // if (result?.error) {
+      //   setError("Failed to sign in. Please try again.");
+      //   setIsLoading(false);
+      // } else if (result?.url) {
+      //   // Successful sign in, redirect to dashboard
+      //   router.push("/dashboard");
+      // }
     } catch (error) {
       console.error("Sign in failed:", error);
+      setError("An unexpected error occurred. Please try again.");
       setIsLoading(false);
     }
   };
@@ -134,19 +154,33 @@ export default function CozyLoginPage() {
           awaits.
         </p>
 
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm"
+          >
+            {error}
+          </motion.div>
+        )}
+
         <motion.button
           onClick={handleGoogleSignIn}
           disabled={isLoading}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: isLoading ? 1 : 1.03 }}
+          whileTap={{ scale: isLoading ? 1 : 0.98 }}
           transition={{ type: "spring", stiffness: 400, damping: 17 }}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-sm"
         >
           <GoogleIcon />
           <span className="font-nunito-sans font-bold text-base">
             {isLoading ? "Signing in..." : "Continue with Google"}
           </span>
         </motion.button>
+
+        <p className="font-nunito-sans text-xs text-[#9B8B7A] mt-6">
+          By continuing, you agree to our cozy terms of service
+        </p>
       </motion.div>
     </div>
   );

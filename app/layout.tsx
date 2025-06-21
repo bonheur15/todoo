@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Lora, Nunito_Sans } from "next/font/google";
 import "./globals.css";
+import { SessionProvider } from "next-auth/react";
 
 const lora = Lora({
   subsets: ["latin"],
@@ -53,7 +54,7 @@ export default function RootLayout({
       >
         {/* uncessary wanted to try an idea but failed and didnt remove the code still now */}
         <main className="w-[100%] h-[100%] fixed flex flex-col">
-          {children}
+          <SessionProvider>{children}</SessionProvider>
         </main>
       </body>
     </html>

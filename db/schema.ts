@@ -50,7 +50,7 @@ export const session = mysqlTable("session", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   expires: timestamp({ mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
+    .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 });
 
@@ -64,6 +64,7 @@ export const todo = mysqlTable("todo", {
   listId: varchar({ length: 255 })
     .notNull()
     .references(() => todoList.id, { onDelete: "cascade" }),
+  parentTodoId: varchar({ length: 255 }),
   createdAt: timestamp({ fsp: 3, mode: "string" })
     .default(sql`CURRENT_TIMESTAMP(3)`)
     .notNull(),
@@ -92,9 +93,10 @@ export const user = mysqlTable(
     id: varchar({ length: 255 }).notNull().primaryKey(),
     name: varchar({ length: 255 }).default("NULL"),
     email: varchar({ length: 255 }).default("NULL"),
-    emailVerified: timestamp({ fsp: 3, mode: "string" })
-      .default(sql`CURRENT_TIMESTAMP(3)`)
-      .notNull(),
+    // emailVerified: timestamp({ fsp: 3, mode: "string" })
+    //   .default(sql`CURRENT_TIMESTAMP(3)`)
+    //   .notNull(),
+    emailVerified: tinyint("emailVerified").default(1),
     image: varchar({ length: 255 }).default("NULL"),
   },
   (table) => [unique("user_email_unique").on(table.email)]
@@ -104,6 +106,6 @@ export const verificationtoken = mysqlTable("verificationtoken", {
   identifier: varchar({ length: 255 }).notNull(),
   token: varchar({ length: 255 }).notNull(),
   expires: timestamp({ mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
+    .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 });

@@ -14,6 +14,7 @@ const addListSchema = z.object({
 const addTodoSchema = z.object({
   content: z.string().min(1, "Todo content cannot be empty.").max(280),
   listId: z.string(),
+  parentTodoId: z.string().optional().nullable(),
 });
 const toggleTodoSchema = z.object({
   id: z.string(),
@@ -60,6 +61,7 @@ export async function addTodoAction(formData: FormData) {
   const rawData = {
     content: formData.get("newTodoContent") as string,
     listId: formData.get("activeListId") as string,
+    parentTodoId: formData.get("parentTodoId") as string,
   };
 
   const validation = addTodoSchema.safeParse(rawData);
@@ -73,6 +75,7 @@ export async function addTodoAction(formData: FormData) {
       content: validation.data.content,
       listId: validation.data.listId,
       userId,
+      parentTodoId: validation.data.parentTodoId,
     };
     await db.insert(todo).values(newTodo);
     revalidatePath("/dashboard");
