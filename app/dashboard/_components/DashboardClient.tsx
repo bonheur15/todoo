@@ -17,6 +17,8 @@ import {
 } from "@/app/actions";
 import type { TodoList } from "@/lib/types";
 import { User } from "next-auth";
+import TaskCard from "./taskCard";
+import AddTodoForm from "./AddTodoForm";
 
 const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -90,7 +92,6 @@ export default function DashboardClient({
   useEffect(() => {
     setLists(initialLists);
   }, [initialLists]);
-
   const activeList = useMemo(
     () => lists.find((l) => l.id === activeListId),
     [lists, activeListId]
@@ -112,17 +113,6 @@ export default function DashboardClient({
       } else if (result?.error) {
         console.error(result.error);
       }
-    });
-  };
-
-  const handleAddTodo = async (formData: FormData) => {
-    const newTodoContent = (
-      (formData.get("newTodoContent") as string) || ""
-    ).trim();
-    if (!newTodoContent || !activeListId) return;
-    startTransition(async () => {
-      await addTodoAction(formData);
-      addTodoFormRef.current?.reset();
     });
   };
 
@@ -242,26 +232,25 @@ export default function DashboardClient({
           </AnimatePresence>
         </ul>
 
-        <form ref={addListFormRef} action={handleAddList} className="mt-4">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              name="newListName"
-              required
-              placeholder="New list name..."
-              className="w-full bg-transparent border-b-2 border-[#DCD1C2] focus:border-[#C19A6B] p-1 font-nunito-sans placeholder:text-[#a09486] focus:outline-none transition-colors"
-            />
-            <button
-              type="submit"
-              disabled={isPending}
-              className="p-1 rounded-md hover:bg-[#EADFD1] text-[#C19A6B] shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <PlusIcon />
-            </button>
-          </div>
-        </form>
-
         <div className="mt-8 pt-4 border-t border-[#DCD1C2]">
+          <form ref={addListFormRef} action={handleAddList} className="mt-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                name="newListName"
+                required
+                placeholder="New list name..."
+                className="w-full bg-transparent border-b-2 border-[#DCD1C2] focus:border-[#C19A6B] p-1 font-nunito-sans placeholder:text-[#a09486] focus:outline-none transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={isPending}
+                className="p-1 rounded-md hover:bg-[#EADFD1] text-[#C19A6B] shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <PlusIcon />
+              </button>
+            </div>
+          </form>
           <button
             onClick={() => signOut()}
             className="w-full flex items-center gap-3 text-left font-nunito-sans text-base p-2 rounded-lg text-[#6D6356] hover:bg-[#EADFD1]/60"
@@ -284,7 +273,9 @@ export default function DashboardClient({
               </h2>
             </div>
 
-            <form
+            <AddTodoForm activeListId={activeListId!} />
+
+            {/* <form
               ref={addTodoFormRef}
               action={handleAddTodo}
               className="relative mb-6"
@@ -308,46 +299,18 @@ export default function DashboardClient({
               >
                 <PlusIcon />
               </button>
-            </form>
-
-            <ul className="space-y-3">
-              <AnimatePresence>
-                {activeList.todos.map((todo) => (
-                  <motion.li
-                    key={todo.id}
-                    layout
-                    initial={{ opacity: 0, y: 20, height: 0 }}
-                    animate={{ opacity: 1, y: 0, height: "auto" }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="flex items-center bg-white/50 p-4 rounded-xl shadow-sm group"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`todo-${todo.id}`}
-                      checked={todo.completed}
-                      onChange={(e) =>
-                        handleToggleTodo(todo.id, e.target.checked)
-                      }
-                      className="peer"
-                    />
-                    <label
-                      htmlFor={`todo-${todo.id}`}
-                      className="ml-4 font-nunito-sans text-lg text-[#4A4238] peer-checked:line-through peer-checked:text-[#a09486] transition-colors duration-300 cursor-pointer"
-                    >
-                      {todo.content}
-                    </label>
-                    <button
-                      onClick={() => handleDeleteTodo(todo.id)}
-                      className="ml-auto p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <TrashIcon />
-                    </button>
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </ul>
-
+            </form> */}
+            <div className="space-y-3 ">
+              {activeList.todos.map((todo) => (
+                <TaskCard
+                  activeListId={activeListId}
+                  key={todo.id}
+                  todo={todo}
+                  onToggleTodo={handleToggleTodo}
+                  onDeleteTodo={handleDeleteTodo}
+                />
+              ))}
+            </div>
             {activeList.todos.length === 0 && !isPending && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

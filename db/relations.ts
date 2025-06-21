@@ -36,7 +36,19 @@ export const sessionRelations = relations(session, ({ one }) => ({
   }),
 }));
 
-export const todoRelations = relations(todo, ({ one }) => ({
+export const todoRelations = relations(todo, ({ one, many }) => ({
+  // Parent todo relation
+  parentTodo: one(todo, {
+    fields: [todo.parentTodoId],
+    references: [todo.id],
+    relationName: "parentTodo",
+  }),
+
+  // Child todos (subtasks) relation
+  subtodos: many(todo, {
+    relationName: "subTodos",
+  }),
+
   todoList: one(todoList, {
     fields: [todo.listId],
     references: [todoList.id],
