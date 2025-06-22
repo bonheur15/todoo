@@ -6,6 +6,7 @@ import {
   session,
   todoList,
   todo,
+  subTodo
 } from "./schema";
 
 export const accountRelations = relations(account, ({ one }) => ({
@@ -36,10 +37,18 @@ export const sessionRelations = relations(session, ({ one }) => ({
   }),
 }));
 
-export const todoRelations = relations(todo, ({ one }) => ({
+export const todoRelations = relations(todo, ({ one ,many }) => ({
+  subTodos: many(subTodo),
   todoList: one(todoList, {
     fields: [todo.listId],
     references: [todoList.id],
+  }),
+}));
+
+export const subTodoRelations = relations(subTodo, ({ one }) => ({
+  todo: one(todo, {
+    fields: [subTodo.todoId],
+    references: [todo.id],
   }),
 }));
 
