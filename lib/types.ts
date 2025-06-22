@@ -3,6 +3,14 @@ export type Todo = {
   content: string;
   completed: boolean;
   listId: string;
+  subTodos: SubTodo[];
+};
+
+export type SubTodo = {
+  id: string;
+  content: string;
+  completed: boolean;
+  todoId:string;
 };
 
 export type TodoList = {

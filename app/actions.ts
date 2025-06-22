@@ -81,6 +81,32 @@ export async function addTodoAction(formData: FormData) {
     return { error: "Failed to add todo." };
   }
 }
+export async function addSubTodoAction(formData: FormData) {
+  const userId = await getUserId();
+  const rawData = {
+    content: formData.get("newTodoContent") as string,
+    listId: formData.get("activeListId") as string,
+  };
+
+  const validation = addTodoSchema.safeParse(rawData);
+  if (!validation.success) {
+    return { error: validation.error.format().content?._errors[0] };
+  }
+
+  try {
+    const newTodo = {
+      id: `todo-${nanoid(10)}`,
+      content: validation.data.content,
+      listId: validation.data.listId,
+      userId,
+    };
+    await db.insert(todo).values(newTodo);
+    revalidatePath("/dashboard");
+  } catch (error) {
+    console.error("Error adding subtodo:", error);
+    return { error: "Failed to add Sub todo." };
+  }
+}
 
 export async function toggleTodoAction(id: string, completed: boolean) {
   const userId = await getUserId();
