@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { auth } from "@/auth";
-import { todoList, todo } from "@/db/schema";
+import { todoList, todo, subTodo } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -14,6 +14,10 @@ const addListSchema = z.object({
 const addTodoSchema = z.object({
   content: z.string().min(1, "Todo content cannot be empty.").max(280),
   listId: z.string(),
+});
+const addSubTodoSchema = z.object({
+  content: z.string().min(1, "subTodo content cannot be empty.").max(280),
+  todoId: z.string(),
 });
 const toggleTodoSchema = z.object({
   id: z.string(),
@@ -81,31 +85,44 @@ export async function addTodoAction(formData: FormData) {
     return { error: "Failed to add todo." };
   }
 }
-export async function addSubTodoAction(formData: FormData) {
+export async function addSubTodoAction(todoId: string , content:string) {
   const userId = await getUserId();
   const rawData = {
-    content: formData.get("newTodoContent") as string,
-    listId: formData.get("activeListId") as string,
+    todoId,
+    content,
   };
-
-  const validation = addTodoSchema.safeParse(rawData);
+  const validation = addSubTodoSchema.safeParse(rawData);
   if (!validation.success) {
     return { error: validation.error.format().content?._errors[0] };
   }
-
   try {
-    const newTodo = {
+    console.log('it reachted in the catchbrck')
+    const newSubTodo = {
       id: `todo-${nanoid(10)}`,
       content: validation.data.content,
-      listId: validation.data.listId,
+      todoId: validation.data.todoId,
       userId,
     };
-    await db.insert(todo).values(newTodo);
+    await db.insert(subTodo).values(newSubTodo);
     revalidatePath("/dashboard");
   } catch (error) {
     console.error("Error adding subtodo:", error);
-    return { error: "Failed to add Sub todo." };
+    return { error: "Failed to add SubTodo." };
   }
+}
+
+export async function toggleSubTodoAction(id: string, completed: boolean) {
+  const userId = await getUserId();
+  const validation = toggleTodoSchema.safeParse({ id, completed });
+  if (!validation.success) return;
+
+  await db
+    .update(subTodo)
+    .set({ completed: completed ? 1 : 0 })
+    // Extra security: ensure the todo belongs to the current user
+    .where(and(eq(subTodo.id, id), eq(todo.userId, userId)));
+
+  revalidatePath("/dashboard");
 }
 
 export async function toggleTodoAction(id: string, completed: boolean) {

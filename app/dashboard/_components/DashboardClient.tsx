@@ -14,8 +14,9 @@ import {
   addTodoAction,
   toggleTodoAction,
   deleteTodoAction,
+  addSubTodoAction,
 } from "@/app/actions";
-import type { TodoList } from "@/lib/types";
+import type { TodoList, SubTodo } from "@/lib/types";
 import { User } from "next-auth";
 
 const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -34,6 +35,7 @@ const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <line x1="5" y1="12" x2="19" y2="12"></line>
   </svg>
 );
+
 const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
@@ -52,6 +54,7 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <line x1="14" y1="11" x2="14" y2="17"></line>
   </svg>
 );
+
 const LogoutIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
@@ -70,12 +73,6 @@ const LogoutIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-type SubTodo = {
-  id: string;
-  content: string;
-  completed: boolean;
-};
-
 type DashboardClientProps = {
   initialLists: TodoList[];
   user: User;
@@ -93,7 +90,6 @@ export default function DashboardClient({
   const addListFormRef = useRef<HTMLFormElement>(null);
   const addTodoFormRef = useRef<HTMLFormElement>(null);
   const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
-  const [subTodos, setSubTodos] = useState<Record<string, SubTodo[]>>({});
 
   useEffect(() => {
     setLists(initialLists);
@@ -103,6 +99,7 @@ export default function DashboardClient({
     () => lists.find((l) => l.id === activeListId),
     [lists, activeListId]
   );
+
   const [greeting, setGreeting] = useState("");
   useEffect(() => {
     const hour = new Date().getHours();
@@ -110,33 +107,6 @@ export default function DashboardClient({
     else if (hour < 18) setGreeting("Good afternoon");
     else setGreeting("Good evening");
   }, []);
-
-  // Initialize mock subtodos
-  useEffect(() => {
-    if (activeList) {
-      const mockSubTodos: Record<string, SubTodo[]> = {};
-      activeList.todos.forEach((todo) => {
-        mockSubTodos[todo.id] = [
-          {
-            id: `${todo.id}-1`,
-            content: "First step to complete this task",
-            completed: false,
-          },
-          {
-            id: `${todo.id}-2`,
-            content: "Second important action",
-            completed: false,
-          },
-          {
-            id: `${todo.id}-3`,
-            content: "Final touches",
-            completed: false,
-          },
-        ];
-      });
-      setSubTodos(mockSubTodos);
-    }
-  }, [activeList]);
 
   const handleAddList = async (formData: FormData) => {
     startTransition(async () => {
@@ -158,6 +128,12 @@ export default function DashboardClient({
     startTransition(async () => {
       await addTodoAction(formData);
       addTodoFormRef.current?.reset();
+    });
+  };
+  const handleAddSubTodo = async (activeTodoId: string, content: string) => {
+    if (!activeTodoId || !content) return;
+    startTransition(async () => {
+      await addSubTodoAction(activeTodoId, content);
     });
   };
 
@@ -197,19 +173,33 @@ export default function DashboardClient({
   };
 
   const toggleSubTodo = (todoId: string, subTodoId: string) => {
-    setSubTodos((prev) => ({
-      ...prev,
-      [todoId]: prev[todoId].map((subTodo) =>
-        subTodo.id === subTodoId
-          ? { ...subTodo, completed: !subTodo.completed }
-          : subTodo
-      ),
-    }));
+    startTransition(() => {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === activeListId
+            ? {
+                ...list,
+                todos: list.todos.map((t) =>
+                  t.id === todoId
+                    ? {
+                        ...t,
+                        subtodos: t.subTodos?.map((st) =>
+                          st.id === subTodoId
+                            ? { ...st, completed: !st.completed }
+                            : st
+                        ),
+                      }
+                    : t
+                ),
+              }
+            : list
+        )
+      );
+    });
   };
 
   return (
     <div className="flex h-screen bg-[#FDF8F0] text-[#4A4238]">
-      {/* --- STYLES (unchanged) --- */}
       <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,700&display=swap");
         .font-lora {
@@ -218,7 +208,6 @@ export default function DashboardClient({
         .font-nunito-sans {
           font-family: "Nunito Sans", sans-serif;
         }
-        /* Custom checkbox style for a cozier feel */
         input[type="checkbox"] {
           appearance: none;
           -webkit-appearance: none;
@@ -410,7 +399,7 @@ export default function DashboardClient({
                         >
                           <div className="p-8 border-t border-[#EADFD1]">
                             <ul className="space-y-2">
-                              {subTodos[todo.id]?.map((subTodo) => (
+                              {todo.subTodos?.map((subTodo) => (
                                 <li
                                   key={subTodo.id}
                                   className="flex items-center"
@@ -437,12 +426,40 @@ export default function DashboardClient({
                                 </li>
                               ))}
                             </ul>
-                            <button className="mt-2 flex items-center text-[#C19A6B] hover:text-[#a08359] transition-colors cursor-pointer">
-                              <PlusIcon className="w-4 h-4" />
-                              <span className="font-nunito-sans text-sm ml-1">
-                                Add subtask...
-                              </span>
-                            </button>
+                            <div className="flex mt-6 cursor-pointer">
+                              <input
+                                type="text"
+                                name="newSubTodoContent"
+                                required
+                                placeholder="Add subtask..."
+                                className="w-full flex items-center text-[#C19A6B] hover:text-[#a08359] transition-colors cursor-pointer bg-transparent border-none outline-none font-nunito-sans text-sm"
+                                onKeyDown={(e) => {
+                                  if (
+                                    e.key === "Enter" &&
+                                    e.currentTarget.value.trim()
+                                  ) {
+                                    handleAddSubTodo(
+                                      todo.id,
+                                      e.currentTarget.value
+                                    );
+                                    e.currentTarget.value = ""; // Clear input
+                                  }
+                                }}
+                              />
+                              <PlusIcon
+                                className="text-[#C19A6B] hover:text-[#a08359] transition-colors cursor-pointer"
+                                onClick={() => {
+                                  const input =
+                                    document.querySelector<HTMLInputElement>(
+                                      'input[name="newSubTodoContent"]'
+                                    );
+                                  if (input?.value.trim()) {
+                                    handleAddSubTodo(todo.id, input.value);
+                                    input.value = ""; // Clear input
+                                  }
+                                }}
+                              />
+                            </div>
                           </div>
                         </motion.div>
                       )}
