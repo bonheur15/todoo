@@ -70,6 +70,12 @@ const LogoutIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+type SubTodo = {
+  id: string;
+  content: string;
+  completed: boolean;
+};
+
 type DashboardClientProps = {
   initialLists: TodoList[];
   user: User;
@@ -86,6 +92,8 @@ export default function DashboardClient({
   const [isPending, startTransition] = useTransition();
   const addListFormRef = useRef<HTMLFormElement>(null);
   const addTodoFormRef = useRef<HTMLFormElement>(null);
+  const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
+  const [subTodos, setSubTodos] = useState<Record<string, SubTodo[]>>({});
 
   useEffect(() => {
     setLists(initialLists);
@@ -102,6 +110,33 @@ export default function DashboardClient({
     else if (hour < 18) setGreeting("Good afternoon");
     else setGreeting("Good evening");
   }, []);
+
+  // Initialize mock subtodos
+  useEffect(() => {
+    if (activeList) {
+      const mockSubTodos: Record<string, SubTodo[]> = {};
+      activeList.todos.forEach((todo) => {
+        mockSubTodos[todo.id] = [
+          {
+            id: `${todo.id}-1`,
+            content: "First step to complete this task",
+            completed: false,
+          },
+          {
+            id: `${todo.id}-2`,
+            content: "Second important action",
+            completed: false,
+          },
+          {
+            id: `${todo.id}-3`,
+            content: "Final touches",
+            completed: false,
+          },
+        ];
+      });
+      setSubTodos(mockSubTodos);
+    }
+  }, [activeList]);
 
   const handleAddList = async (formData: FormData) => {
     startTransition(async () => {
@@ -146,7 +181,6 @@ export default function DashboardClient({
 
   const handleDeleteTodo = (todoId: string) => {
     startTransition(() => {
-      // Optimistic UI update
       setLists((prev) =>
         prev.map((list) =>
           list.id === activeListId
@@ -156,6 +190,21 @@ export default function DashboardClient({
       );
       deleteTodoAction(todoId);
     });
+  };
+
+  const toggleTodoExpansion = (todoId: string) => {
+    setExpandedTodoId(expandedTodoId === todoId ? null : todoId);
+  };
+
+  const toggleSubTodo = (todoId: string, subTodoId: string) => {
+    setSubTodos((prev) => ({
+      ...prev,
+      [todoId]: prev[todoId].map((subTodo) =>
+        subTodo.id === subTodoId
+          ? { ...subTodo, completed: !subTodo.completed }
+          : subTodo
+      ),
+    }));
   };
 
   return (
@@ -313,37 +362,92 @@ export default function DashboardClient({
             <ul className="space-y-3">
               <AnimatePresence>
                 {activeList.todos.map((todo) => (
-                  <motion.li
-                    key={todo.id}
-                    layout
-                    initial={{ opacity: 0, y: 20, height: 0 }}
-                    animate={{ opacity: 1, y: 0, height: "auto" }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="flex items-center bg-white/50 p-4 rounded-xl shadow-sm group"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`todo-${todo.id}`}
-                      checked={todo.completed}
-                      onChange={(e) =>
-                        handleToggleTodo(todo.id, e.target.checked)
-                      }
-                      className="peer"
-                    />
-                    <label
-                      htmlFor={`todo-${todo.id}`}
-                      className="ml-4 font-nunito-sans text-lg text-[#4A4238] peer-checked:line-through peer-checked:text-[#a09486] transition-colors duration-300 cursor-pointer"
+                  <React.Fragment key={todo.id}>
+                    <motion.li
+                      layout
+                      initial={{ opacity: 0, y: 20, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: "auto" }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                      }}
+                      className="flex flex-col bg-white/50 rounded-xl shadow-sm group overflow-hidden"
                     >
-                      {todo.content}
-                    </label>
-                    <button
-                      onClick={() => handleDeleteTodo(todo.id)}
-                      className="ml-auto p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <TrashIcon />
-                    </button>
-                  </motion.li>
+                      <div className="flex items-center p-4">
+                        <input
+                          type="checkbox"
+                          id={`todo-${todo.id}`}
+                          checked={todo.completed}
+                          onChange={(e) =>
+                            handleToggleTodo(todo.id, e.target.checked)
+                          }
+                          className="peer"
+                        />
+                        <label
+                          htmlFor={`todo-${todo.id}`}
+                          className="ml-4 font-nunito-sans text-lg text-[#4A4238] peer-checked:line-through peer-checked:text-[#a09486] transition-colors duration-300 cursor-pointer flex-grow"
+                          onClick={() => toggleTodoExpansion(todo.id)}
+                        >
+                          {todo.content}
+                        </label>
+                        <button
+                          onClick={() => handleDeleteTodo(todo.id)}
+                          className="ml-auto p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+
+                      {expandedTodoId === todo.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="bg-[#F6EFE6]/70 pl-14 pr-4 pb-3"
+                        >
+                          <div className="p-8 border-t border-[#EADFD1]">
+                            <ul className="space-y-2">
+                              {subTodos[todo.id]?.map((subTodo) => (
+                                <li
+                                  key={subTodo.id}
+                                  className="flex items-center"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    id={`subtodo-${subTodo.id}`}
+                                    checked={subTodo.completed}
+                                    onChange={() =>
+                                      toggleSubTodo(todo.id, subTodo.id)
+                                    }
+                                    className="mr-3"
+                                  />
+                                  <label
+                                    htmlFor={`subtodo-${subTodo.id}`}
+                                    className={`font-nunito-sans text-base ml-4 ${
+                                      subTodo.completed
+                                        ? "line-through text-[#a09486]"
+                                        : "text-[#6D6356]"
+                                    }`}
+                                  >
+                                    {subTodo.content}
+                                  </label>
+                                </li>
+                              ))}
+                            </ul>
+                            <button className="mt-2 flex items-center text-[#C19A6B] hover:text-[#a08359] transition-colors cursor-pointer">
+                              <PlusIcon className="w-4 h-4" />
+                              <span className="font-nunito-sans text-sm ml-1">
+                                Add subtask...
+                              </span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </motion.li>
+                  </React.Fragment>
                 ))}
               </AnimatePresence>
             </ul>
