@@ -128,19 +128,10 @@ export async function toggleTodoAction(id: string, completed: boolean) {
   const validation = toggleTodoSchema.safeParse({ id, completed });
   if (!validation.success) return;
 
-  // Update the parent todo
   await db
     .update(todo)
     .set({ completed: completed ? 1 : 0 })
     .where(and(eq(todo.id, id), eq(todo.userId, userId)));
-
-  // If marking as completed, also mark all subtasks as completed
-  if (completed) {
-    await db
-      .update(todo)
-      .set({ completed: 1 })
-      .where(and(eq(todo.parentId, id), eq(todo.userId, userId)));
-  }
 
   revalidatePath("/dashboard");
 }
@@ -184,13 +175,16 @@ export async function updateTodoAction(id: string, content: string) {
 
 export async function deleteListAction(id: string) {
   const userId = await getUserId();
+  console.log('Attempting to delete list:', id, 'for user:', userId);
   const validation = deleteListSchema.safeParse({ id });
   if (!validation.success) return;
 
   // Delete all todos in the list (cascades to subtasks)
-  await db.delete(todo).where(and(eq(todo.listId, id), eq(todo.userId, userId)));
+  const todoDeleteResult = await db.delete(todo).where(and(eq(todo.listId, id), eq(todo.userId, userId)));
+  console.log('Deleted todos result:', todoDeleteResult);
   // Delete the list itself
-  await db.delete(todoList).where(and(eq(todoList.id, id), eq(todoList.userId, userId)));
+  const listDeleteResult = await db.delete(todoList).where(and(eq(todoList.id, id), eq(todoList.userId, userId)));
+  console.log('Deleted list result:', listDeleteResult);
 
   revalidatePath("/dashboard");
 }

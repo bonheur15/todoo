@@ -171,6 +171,19 @@ export default function DashboardClient({
         )
       );
       toggleTodoAction(todoId, completed);
+
+      // Show undo snackbar only when marking as completed
+      if (completed) {
+        const todo = activeList?.todos.find((t) => t.id === todoId);
+        setUndoToast({
+          id: todoId,
+          type: "todo",
+          prevCompleted: !!todo?.completed,
+          subtasks: todo?.subtasks?.map(st => ({ id: st.id, completed: st.completed })) || [],
+        });
+        if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+        undoTimeoutRef.current = setTimeout(() => setUndoToast(null), 7000);
+      }
     });
   };
 
@@ -207,6 +220,46 @@ export default function DashboardClient({
     startTransition(() => {
       toggleSubtaskAction(subtaskId, completed);
     });
+  };
+
+  const handleDeleteSubtask = (subtaskId: string, parentTodoId: string) => {
+    startTransition(() => {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === activeListId
+            ? {
+                ...list,
+                todos: list.todos.map((t) =>
+                  t.id === parentTodoId
+                    ? {
+                        ...t,
+                        subtasks: t.subtasks?.filter((st) => st.id !== subtaskId) || [],
+                      }
+                    : t
+                ),
+              }
+            : list
+        )
+      );
+      deleteTodoAction(subtaskId);
+    });
+  };
+
+  // Add this handler for confirming list deletion
+  const handleConfirmDeleteList = async () => {
+    if (!deleteListModal) return;
+    console.log('Client: Deleting list', deleteListModal.id);
+    await deleteListAction(deleteListModal.id);
+    setDeleteListModal(null);
+    // Optionally, update local state optimistically
+    setLists((prev) => prev.filter((l) => l.id !== deleteListModal.id));
+    // If the active list was deleted, switch to another
+    if (activeListId === deleteListModal.id) {
+      setActiveListId(prev => {
+        const remaining = lists.filter(l => l.id !== deleteListModal.id);
+        return remaining[0]?.id || null;
+      });
+    }
   };
 
   return (
@@ -330,10 +383,11 @@ export default function DashboardClient({
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -10 }}
+                className="flex items-center group"
               >
                 <button
                   onClick={() => setActiveListId(list.id)}
-                  className={`w-full text-left font-nunito-sans text-base p-2 rounded-lg transition-colors duration-200 ${
+                  className={`flex-1 text-left font-nunito-sans text-base p-2 rounded-lg transition-colors duration-200 ${
                     activeListId === list.id
                       ? "bg-[#EADFD1] text-[#4A4238] font-bold"
                       : "hover:bg-[#EADFD1]/60 text-[#6D6356]"
@@ -341,12 +395,63 @@ export default function DashboardClient({
                 >
                   {list.name}
                 </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteListModal({ id: list.id, name: list.name });
+                  }}
+                  className="ml-2 p-1 rounded hover:bg-red-100 text-[#bdb7ae] group-hover:text-red-500"
+                  title="Delete list"
+                >
+                  <TrashIcon />
+                </button>
               </motion.li>
             ))}
           </AnimatePresence>
         </ul>
 
         <form ref={addListFormRef} action={handleAddList} className="mt-4">
+          {showTemplates && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-3 p-3 bg-[#F6EFE6] border border-[#EADFD1] rounded-xl shadow-sm flex flex-col gap-2"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-nunito-sans text-[#867a6e] text-sm">Try a template:</span>
+                <button onClick={() => setShowTemplates(false)} className="text-[#bdb7ae] text-xs px-2 py-1 hover:underline">Dismiss</button>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {TEMPLATE_LISTS.map((tpl) => (
+                  <button
+                    key={tpl.name}
+                    className="px-3 py-1 rounded-lg bg-[#60b6ff] text-white font-nunito-sans text-sm hover:bg-[#4f8ff9] transition"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      // Create the list
+                      const formData = new FormData();
+                      formData.set("newListName", tpl.name);
+                      const result = await addListAction(formData);
+                      if (result?.data) {
+                        // Add example todos
+                        for (const todoText of tpl.todos) {
+                          const todoForm = new FormData();
+                          todoForm.set("newTodoContent", todoText);
+                          todoForm.set("activeListId", result.data.id);
+                          await addTodoAction(todoForm);
+                        }
+                        setActiveListId(result.data.id);
+                        setShowTemplates(false);
+                      }
+                    }}
+                  >
+                    {tpl.name}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -354,6 +459,8 @@ export default function DashboardClient({
               required
               placeholder="New list name..."
               className="w-full bg-transparent border-b-2 border-[#DCD1C2] focus:border-[#C19A6B] p-1 font-nunito-sans placeholder:text-[#a09486] focus:outline-none transition-colors"
+              onFocus={() => { if (lists.length === 0) setShowTemplates(true); setAddListInputFocused(true); }}
+              onBlur={() => setAddListInputFocused(false)}
             />
             <button
               type="submit"
@@ -476,6 +583,13 @@ export default function DashboardClient({
                               <span className="completed-label">- completed</span>
                             )}
                             <button
+                              onClick={() => handleDeleteSubtask(subtask.id, todo.id)}
+                              className="ml-2 p-1 rounded hover:bg-red-100 text-[#bdb7ae] hover:text-red-500"
+                              title="Delete subtask"
+                            >
+                              <TrashIcon />
+                            </button>
+                            <button
                               onClick={() => { setModal({ id: subtask.id, content: subtask.content, type: 'subtask' }); setModalInput(subtask.content); }}
                               className="ml-2 p-1 rounded hover:bg-[#EADFD1] text-[#bdb7ae]"
                               title="Edit subtask"
@@ -591,6 +705,82 @@ export default function DashboardClient({
             </motion.div>
           </motion.div>
         </AnimatePresence>
+      )}
+
+      {deleteListModal && (
+        <AnimatePresence>
+          <motion.div
+            key="delete-list-modal-bg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center"
+            onClick={() => setDeleteListModal(null)}
+          >
+            <motion.div
+              key="delete-list-modal"
+              initial={{ scale: 0.8, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 40 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="bg-white rounded-2xl shadow-xl p-6 min-w-[320px] max-w-[90vw] relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="font-lora text-xl mb-3">Delete List</h3>
+              <p className="mb-4 font-nunito-sans text-base text-[#867a6e]">
+                Are you sure you want to delete the list <b>{deleteListModal.name}</b>?
+                This will also delete all tasks and subtasks in the list.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setDeleteListModal(null)} className="px-4 py-2 rounded-lg bg-[#F6EFE6] text-[#a09486] font-nunito-sans">Cancel</button>
+                <button type="button" onClick={handleConfirmDeleteList} className="px-4 py-2 rounded-lg bg-red-500 text-white font-nunito-sans">Delete</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {undoToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white shadow-lg rounded-xl px-6 py-3 flex items-center gap-4 z-50">
+          <span className="font-nunito-sans text-[#4A4238]">
+            Task marked as completed.
+          </span>
+          <button
+            className="ml-4 px-3 py-1 rounded bg-[#60b6ff] text-white font-nunito-sans"
+            onClick={() => {
+              // Undo logic: revert completed state for todo and subtasks
+              setLists((prev) =>
+                prev.map((list) =>
+                  list.id === activeListId
+                    ? {
+                        ...list,
+                        todos: list.todos.map((t) =>
+                          t.id === undoToast.id
+                            ? {
+                                ...t,
+                                completed: undoToast.prevCompleted,
+                                subtasks: t.subtasks?.map(st => {
+                                  const prev = undoToast.subtasks?.find(s => s.id === st.id);
+                                  return prev ? { ...st, completed: prev.completed } : st;
+                                }) || [],
+                              }
+                            : t
+                        ),
+                      }
+                    : list
+                )
+              );
+              toggleTodoAction(undoToast.id, undoToast.prevCompleted);
+              // Also revert subtasks if needed
+              undoToast.subtasks?.forEach(st =>
+                toggleSubtaskAction(st.id, st.completed)
+              );
+              setUndoToast(null);
+            }}
+          >
+            Undo
+          </button>
+        </div>
       )}
     </div>
   );
