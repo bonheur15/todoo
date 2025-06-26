@@ -8,6 +8,7 @@ import DashboardClient from "./_components/DashboardClient";
 
 export default async function DashboardPage() {
   const session = await auth();
+  console.log('SESSION DEBUG:', session); // Debug line
   if (!session?.user?.id) {
     redirect("/auth");
   }

@@ -22,6 +22,18 @@ const toggleTodoSchema = z.object({
 const deleteTodoSchema = z.object({
   id: z.string(),
 });
+const addSubtaskSchema = z.object({
+  content: z.string().min(1, "Subtask content cannot be empty.").max(280),
+  parentId: z.string(),
+  listId: z.string(),
+});
+const updateTodoSchema = z.object({
+  id: z.string(),
+  content: z.string().min(1, "Content cannot be empty.").max(280),
+});
+const deleteListSchema = z.object({
+  id: z.string(),
+});
 
 const getUserId = async () => {
   const session = await auth();
@@ -82,6 +94,35 @@ export async function addTodoAction(formData: FormData) {
   }
 }
 
+export async function addSubtaskAction(formData: FormData) {
+  const userId = await getUserId();
+  const rawData = {
+    content: formData.get("newSubtaskContent") as string,
+    parentId: formData.get("parentTodoId") as string,
+    listId: formData.get("activeListId") as string,
+  };
+
+  const validation = addSubtaskSchema.safeParse(rawData);
+  if (!validation.success) {
+    return { error: validation.error.format().content?._errors[0] };
+  }
+
+  try {
+    const newSubtask = {
+      id: `todo-${nanoid(10)}`,
+      content: validation.data.content,
+      listId: validation.data.listId,
+      userId,
+      parentId: validation.data.parentId,
+    };
+    await db.insert(todo).values(newSubtask);
+    revalidatePath("/dashboard");
+  } catch (error) {
+    console.error("Error adding subtask:", error);
+    return { error: "Failed to add subtask." };
+  }
+}
+
 export async function toggleTodoAction(id: string, completed: boolean) {
   const userId = await getUserId();
   const validation = toggleTodoSchema.safeParse({ id, completed });
@@ -90,7 +131,19 @@ export async function toggleTodoAction(id: string, completed: boolean) {
   await db
     .update(todo)
     .set({ completed: completed ? 1 : 0 })
-    // Extra security: ensure the todo belongs to the current user
+    .where(and(eq(todo.id, id), eq(todo.userId, userId)));
+
+  revalidatePath("/dashboard");
+}
+
+export async function toggleSubtaskAction(id: string, completed: boolean) {
+  const userId = await getUserId();
+  const validation = toggleTodoSchema.safeParse({ id, completed });
+  if (!validation.success) return;
+
+  await db
+    .update(todo)
+    .set({ completed: completed ? 1 : 0 })
     .where(and(eq(todo.id, id), eq(todo.userId, userId)));
 
   revalidatePath("/dashboard");
@@ -102,6 +155,36 @@ export async function deleteTodoAction(id: string) {
   if (!validation.success) return;
 
   await db.delete(todo).where(and(eq(todo.id, id), eq(todo.userId, userId)));
+
+  revalidatePath("/dashboard");
+}
+
+export async function updateTodoAction(id: string, content: string) {
+  const userId = await getUserId();
+  const validation = updateTodoSchema.safeParse({ id, content });
+  if (!validation.success) return { error: validation.error.format().content?._errors[0] };
+
+  await db
+    .update(todo)
+    .set({ content })
+    .where(and(eq(todo.id, id), eq(todo.userId, userId)));
+
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteListAction(id: string) {
+  const userId = await getUserId();
+  console.log('Attempting to delete list:', id, 'for user:', userId);
+  const validation = deleteListSchema.safeParse({ id });
+  if (!validation.success) return;
+
+  // Delete all todos in the list (cascades to subtasks)
+  const todoDeleteResult = await db.delete(todo).where(and(eq(todo.listId, id), eq(todo.userId, userId)));
+  console.log('Deleted todos result:', todoDeleteResult);
+  // Delete the list itself
+  const listDeleteResult = await db.delete(todoList).where(and(eq(todoList.id, id), eq(todoList.userId, userId)));
+  console.log('Deleted list result:', listDeleteResult);
 
   revalidatePath("/dashboard");
 }

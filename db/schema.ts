@@ -54,23 +54,36 @@ export const session = mysqlTable("session", {
     .notNull(),
 });
 
-export const todo = mysqlTable("todo", {
-  id: varchar({ length: 255 }).notNull().primaryKey(),
-  content: text().notNull(),
-  completed: tinyint().default(0).notNull(),
-  userId: varchar({ length: 255 })
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  listId: varchar({ length: 255 })
-    .notNull()
-    .references(() => todoList.id, { onDelete: "cascade" }),
-  createdAt: timestamp({ fsp: 3, mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
-  updatedAt: timestamp({ fsp: 3, mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP(3)`)
-    .notNull(),
-});
+export const todo = mysqlTable(
+  "todo",
+  {
+    id: varchar({ length: 255 }).notNull().primaryKey(),
+    content: text().notNull(),
+    completed: tinyint().default(0).notNull(),
+    userId: varchar({ length: 255 })
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    listId: varchar({ length: 255 })
+      .notNull()
+      .references(() => todoList.id, { onDelete: "cascade" }),
+    parentId: varchar({ length: 255 }),
+    createdAt: timestamp({ fsp: 3, mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP(3)`)
+      .notNull(),
+    updatedAt: timestamp({ fsp: 3, mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP(3)`)
+      .notNull(),
+  },
+  (todo) => ({
+    foreignKeys: [
+      {
+        columns: [todo.parentId],
+        foreignColumns: [todo.id],
+        onDelete: "cascade",
+      },
+    ],
+  })
+);
 
 export const todoList = mysqlTable("todo_list", {
   id: varchar({ length: 255 }).notNull().primaryKey(),

@@ -3,6 +3,8 @@ export type Todo = {
   content: string;
   completed: boolean;
   listId: string;
+  parentId?: string | null;
+  subtasks?: Todo[];
 };
 
 export type TodoList = {
